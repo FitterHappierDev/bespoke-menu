@@ -126,6 +126,26 @@ export function assemblePrompt(ctx: PromptContext, customInstructions?: string):
     .join('\n\n')
 }
 
+export async function buildSingleDishContext(): Promise<{
+  allergyConstraints: string
+  dislikedNames: string[]
+}> {
+  const sb = createServerClient()
+  const { data: configRows } = await sb.from('config').select('allergy_constraints').limit(1)
+  const allergyConstraints = (configRows?.[0]?.allergy_constraints as string) || ''
+
+  const { data: dislikedRows } = await sb
+    .from('daily_feedback')
+    .select('dish:dishes(name)')
+    .eq('rating', 'disliked')
+
+  const dislikedNames = (dislikedRows ?? [])
+    .map((r: any) => r.dish?.name)
+    .filter((n: any): n is string => !!n)
+
+  return { allergyConstraints, dislikedNames }
+}
+
 export function getDefaultPromptPreview(ctx: PromptContext): string {
   return assemblePrompt(ctx)
 }

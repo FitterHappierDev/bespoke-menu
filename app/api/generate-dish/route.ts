@@ -1,11 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
 import { createServerClient } from '@/lib/supabase-server'
-import { buildPromptContext, assemblePrompt } from '@/lib/promptBuilder'
+import { buildSingleDishContext } from '@/lib/promptBuilder'
 import { parseSingleDish } from '@/lib/menuParser'
 import { validateUrl } from '@/lib/urlValidator'
 
-const MODEL = 'claude-sonnet-4-5'
+const MODEL = 'claude-sonnet-4-6'
+
+const SYSTEM_ROLE =
+  "You are a culinary AI assistant generating a single replacement dish. Follow the user's custom instructions precisely while respecting allergy constraints and avoiding previously disliked dishes. Return only the requested JSON."
+
+const SINGLE_DISH_SCHEMA = `### OUTPUT FORMAT (REQUIRED)
+Return ONLY a JSON object (no prose, no markdown fences) shaped:
+{ "dish": { "name": "...", "emoji": "...", "recipe_url": "https://...", "tags": ["..."], "ingredients": ["..."], "description": "...", "is_new": false } }`
 
 export async function POST(request: NextRequest) {
   try {
@@ -23,11 +30,25 @@ export async function POST(request: NextRequest) {
       .map((i: any) => i.dish?.name)
       .filter(Boolean)
 
-    const ctx = await buildPromptContext()
-    const basePrompt = assemblePrompt(ctx, custom_prompt)
-    const prompt =
-      basePrompt +
-      `\n\n### REPLACEMENT TASK\nReplace "${dish_name}" (${type}). Generate exactly 1 replacement dish.\nReturn JSON shaped { "dish": { ... } } with the same fields as before.\nKeep it different from these existing dishes: ${otherNames.join(', ')}.`
+    const { allergyConstraints, dislikedNames } = await buildSingleDishContext()
+
+    const allergyLines = allergyConstraints
+      .split('\n')
+      .map((s) => s.trim())
+      .filter(Boolean)
+      .map((line) => `- NEVER include ${line.replace(/^no\s+/i, '')}`)
+      .join('\n')
+
+    const customBlock = `### CUSTOM INSTRUCTIONS (PRIMARY — follow these first)\n${
+      custom_prompt?.trim() || '(none provided)'
+    }`
+    const taskBlock = `### REPLACEMENT TASK\nReplace "${dish_name}" (${type}). Generate exactly 1 replacement dish.\nIt must be different from these existing dishes: ${otherNames.join(', ') || '(none)'}.`
+    const allergyBlock = `### ALLERGY CONSTRAINTS (HARD RULE)\n${allergyLines || '(none)'}`
+    const excludedBlock = `### EXCLUDED DISHES (do NOT repeat)\n${
+      dislikedNames.length ? dislikedNames.map((n) => `- ${n}`).join('\n') : '(none)'
+    }`
+
+    const prompt = [customBlock, taskBlock, allergyBlock, excludedBlock, SINGLE_DISH_SCHEMA].join('\n\n')
 
     const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! })
     let dish
@@ -37,6 +58,7 @@ export async function POST(request: NextRequest) {
         const res = await client.messages.create({
           model: MODEL,
           max_tokens: 1024,
+          system: SYSTEM_ROLE,
           messages: [{ role: 'user', content: prompt }],
         })
         const block = res.content.find((b) => b.type === 'text') as any
