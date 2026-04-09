@@ -12,13 +12,17 @@ export async function GET() {
 
 export async function PUT(request: NextRequest) {
   const body = await request.json()
-  console.log('[config PUT] body keys:', Object.keys(body))
-  console.log('[config PUT] taste_profile length:', typeof body.taste_profile, body.taste_profile?.length ?? 'n/a')
-  console.log('[config PUT] taste_profile preview:', JSON.stringify(body.taste_profile).slice(0, 200))
+  const debug: any = {
+    body_keys: Object.keys(body),
+    body_taste_profile_type: typeof body.taste_profile,
+    body_taste_profile_length: typeof body.taste_profile === 'string' ? body.taste_profile.length : null,
+    body_taste_profile_preview:
+      typeof body.taste_profile === 'string' ? body.taste_profile.slice(0, 80) : String(body.taste_profile),
+  }
 
   const sb = createServerClient()
   const { data: existing } = await sb.from('config').select('id').limit(1).maybeSingle()
-  console.log('[config PUT] existing row id:', existing?.id)
+  debug.existing_row_id = existing?.id ?? null
 
   const allowed: Record<string, any> = {}
   for (const k of [
@@ -40,19 +44,23 @@ export async function PUT(request: NextRequest) {
     allowed.chef_max_veg = Math.max(1, Math.min(5, allowed.chef_max_veg))
   allowed.updated_at = new Date().toISOString()
 
-  console.log('[config PUT] allowed keys:', Object.keys(allowed))
-  console.log('[config PUT] allowed.taste_profile length:', allowed.taste_profile?.length ?? 'n/a')
+  debug.allowed_keys = Object.keys(allowed)
+  debug.allowed_taste_profile_length =
+    typeof allowed.taste_profile === 'string' ? allowed.taste_profile.length : null
 
   if (existing) {
     const { data, error } = await sb.from('config').update(allowed).eq('id', existing.id).select('*').single()
-    console.log('[config PUT] update error:', error)
-    console.log('[config PUT] update returned taste_profile length:', data?.taste_profile?.length ?? 'n/a')
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-    return NextResponse.json({ config: data })
+    debug.update_error = error?.message ?? null
+    debug.returned_taste_profile_length =
+      typeof data?.taste_profile === 'string' ? data.taste_profile.length : null
+    console.log('[config PUT]', JSON.stringify(debug))
+    if (error) return NextResponse.json({ error: error.message, debug }, { status: 500 })
+    return NextResponse.json({ config: data, debug })
   } else {
     const { data, error } = await sb.from('config').insert(allowed).select('*').single()
-    console.log('[config PUT] insert error:', error)
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-    return NextResponse.json({ config: data })
+    debug.insert_error = error?.message ?? null
+    console.log('[config PUT]', JSON.stringify(debug))
+    if (error) return NextResponse.json({ error: error.message, debug }, { status: 500 })
+    return NextResponse.json({ config: data, debug })
   }
 }
