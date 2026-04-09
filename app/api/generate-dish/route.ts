@@ -67,7 +67,7 @@ export async function POST(request: NextRequest) {
         .eq('id', existing.id)
       dish_id = existing.id
     } else {
-      const { data: inserted } = await sb
+      const { data: inserted, error: insertErr } = await sb
         .from('dishes')
         .insert({
           name: dish.name,
@@ -81,7 +81,8 @@ export async function POST(request: NextRequest) {
         })
         .select('id')
         .single()
-      dish_id = inserted!.id
+      if (insertErr || !inserted) throw new Error(`Failed to insert dish "${dish.name}": ${insertErr?.message}`)
+      dish_id = inserted.id
     }
 
     await sb.from('menu_items').update({ dish_id }).eq('menu_id', menu_id).eq('type', type).eq('position', position)
