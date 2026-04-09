@@ -8,7 +8,7 @@ import { Alert } from '@/components/ui/alert'
 import { Dialog, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
 import { ChefDishCard, type ChefDishCardData } from '@/components/ChefDishCard'
 import { supabase } from '@/lib/supabase-client'
-import { getWeekStart, formatWeekLabel } from '@/lib/weekUtils'
+import { formatWeekLabel } from '@/lib/weekUtils'
 import type { Dish, MenuItem, WeeklyMenu } from '@/types'
 
 interface ChefMenuData {
@@ -19,14 +19,23 @@ interface ChefMenuData {
 }
 
 export default function ChefMenuPage() {
-  const [weekStart] = useState(() => getWeekStart())
+  const [weekStart, setWeekStart] = useState<string | null>(null)
   const [data, setData] = useState<ChefMenuData | null>(null)
   const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    ;(async () => {
+      const res = await fetch('/api/week')
+      const { week_start } = await res.json()
+      setWeekStart(week_start)
+    })()
+  }, [])
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [confirming, setConfirming] = useState(false)
   const [chefNotes, setChefNotes] = useState<Record<string, string>>({})
 
   const fetchData = useCallback(async () => {
+    if (!weekStart) return
     setLoading(true)
     try {
       const res = await fetch(`/api/menu?week_start=${weekStart}&include=history`)
@@ -94,7 +103,7 @@ export default function ChefMenuPage() {
     }
   }
 
-  if (loading && !data) return <div className="text-sm text-muted-foreground">Loading…</div>
+  if (!weekStart || (loading && !data)) return <div className="text-sm text-muted-foreground">Loading…</div>
 
   if (!data?.menu || data.menu.status === 'draft') {
     return (

@@ -13,7 +13,7 @@ import { AiRegenerateDialog } from '@/components/AiRegenerateDialog'
 import { DishAiRegenerateDialog } from '@/components/DishAiRegenerateDialog'
 import { PublishDialog } from '@/components/PublishDialog'
 import { EditDishDialog } from '@/components/EditDishDialog'
-import { getWeekStart, offsetWeek } from '@/lib/weekUtils'
+import { offsetWeek } from '@/lib/weekUtils'
 import { getUIState } from '@/lib/statusMachine'
 import { cn } from '@/lib/utils'
 import type { Dish, MenuItem, WeeklyMenu, ChefProposal } from '@/types'
@@ -27,7 +27,8 @@ interface MenuData {
 
 export default function FamilyMenuPage() {
   const [weekOffset, setWeekOffset] = useState(0)
-  const [weekStart, setWeekStart] = useState(() => getWeekStart())
+  const [anchor, setAnchor] = useState<string | null>(null)
+  const [weekStart, setWeekStart] = useState<string | null>(null)
   const [menuData, setMenuData] = useState<MenuData | null>(null)
   const [loading, setLoading] = useState(false)
   const [mobileTab, setMobileTab] = useState<'protein' | 'veg'>('protein')
@@ -49,10 +50,20 @@ export default function FamilyMenuPage() {
   const [generationError, setGenerationError] = useState<string | null>(null)
 
   useEffect(() => {
-    setWeekStart(offsetWeek(getWeekStart(), weekOffset))
-  }, [weekOffset])
+    ;(async () => {
+      const res = await fetch('/api/week')
+      const { week_start } = await res.json()
+      setAnchor(week_start)
+      setWeekStart(week_start)
+    })()
+  }, [])
+
+  useEffect(() => {
+    if (anchor) setWeekStart(offsetWeek(anchor, weekOffset))
+  }, [anchor, weekOffset])
 
   const fetchMenu = useCallback(async () => {
+    if (!weekStart) return
     setLoading(true)
     try {
       const res = await fetch(`/api/menu?week_start=${weekStart}`)
@@ -66,6 +77,8 @@ export default function FamilyMenuPage() {
   useEffect(() => {
     fetchMenu()
   }, [fetchMenu])
+
+  if (!weekStart) return <div className="text-sm text-muted-foreground">Loading...</div>
 
   const ui = getUIState(menuData?.menu?.status ?? null)
   const isPublished = ui.isReadOnly

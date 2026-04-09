@@ -8,7 +8,7 @@ import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Alert } from '@/components/ui/alert'
-import { getWeekStart, formatWeekLabel } from '@/lib/weekUtils'
+import { formatWeekLabel } from '@/lib/weekUtils'
 import type { ChefProposal, DishType } from '@/types'
 import { cn } from '@/lib/utils'
 
@@ -57,14 +57,23 @@ function parseRow(raw: any): ParsedRow {
 }
 
 export default function ProposePage() {
-  const [weekStart] = useState(() => getWeekStart())
+  const [weekStart, setWeekStart] = useState<string | null>(null)
   const [parsed, setParsed] = useState<ParsedRow[]>([])
   const [submitting, setSubmitting] = useState(false)
   const [existing, setExisting] = useState<ChefProposal[]>([])
   const [dragOver, setDragOver] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
 
+  useEffect(() => {
+    ;(async () => {
+      const res = await fetch('/api/week')
+      const { week_start } = await res.json()
+      setWeekStart(week_start)
+    })()
+  }, [])
+
   const fetchExisting = useCallback(async () => {
+    if (!weekStart) return
     const res = await fetch(`/api/chef-proposals?week_start=${weekStart}`)
     if (res.ok) {
       const json = await res.json()
@@ -122,6 +131,8 @@ export default function ProposePage() {
       setSubmitting(false)
     }
   }
+
+  if (!weekStart) return <div className="text-sm text-muted-foreground">Loading...</div>
 
   const validCount = parsed.filter((p) => p.errors.length === 0).length
   const errorCount = parsed.length - validCount

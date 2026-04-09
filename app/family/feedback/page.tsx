@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
 import { Dialog, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
 import { FeedbackDishCard } from '@/components/FeedbackDishCard'
-import { getWeekStart, formatWeekLabel } from '@/lib/weekUtils'
+import { formatWeekLabel } from '@/lib/weekUtils'
 import type { Dish, MenuItem, WeeklyMenu, DailyFeedback, FeedbackRating } from '@/types'
 
 interface FeedbackData {
@@ -17,13 +17,22 @@ interface FeedbackData {
 }
 
 export default function FeedbackPage() {
-  const [weekStart] = useState(() => getWeekStart())
+  const [weekStart, setWeekStart] = useState<string | null>(null)
   const [data, setData] = useState<FeedbackData | null>(null)
   const [loading, setLoading] = useState(true)
   const [submitOpen, setSubmitOpen] = useState(false)
   const [submitting, setSubmitting] = useState(false)
 
+  useEffect(() => {
+    ;(async () => {
+      const res = await fetch('/api/week')
+      const { week_start } = await res.json()
+      setWeekStart(week_start)
+    })()
+  }, [])
+
   const fetchData = useCallback(async () => {
+    if (!weekStart) return
     setLoading(true)
     try {
       const res = await fetch(`/api/feedback?week_start=${weekStart}`)
@@ -37,6 +46,8 @@ export default function FeedbackPage() {
   useEffect(() => {
     fetchData()
   }, [fetchData])
+
+  if (!weekStart) return <div className="text-sm text-muted-foreground">Loading...</div>
 
   const items = data?.items ?? []
   const feedbackByItem = new Map((data?.feedback ?? []).map((f) => [f.menu_item_id, f]))
