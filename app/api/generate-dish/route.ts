@@ -42,7 +42,11 @@ export async function POST(request: NextRequest) {
     const customBlock = `### CUSTOM INSTRUCTIONS (PRIMARY — follow these first)\n${
       custom_prompt?.trim() || '(none provided)'
     }`
-    const taskBlock = `### REPLACEMENT TASK\nReplace "${dish_name}" (${type}). Generate exactly 1 replacement dish.\nIt must be different from these existing dishes: ${otherNames.join(', ') || '(none)'}.`
+    const dishKind =
+      type === 'protein'
+        ? 'protein-based main dish (the primary protein is the centerpiece — e.g. fish, poultry, meat, tofu, legumes)'
+        : 'vegetable side dish (vegetables are the centerpiece; no meat, poultry, or fish as the main component)'
+    const taskBlock = `### REPLACEMENT TASK\nReplace "${dish_name}". Generate exactly 1 replacement ${dishKind}.\nIt must be different from these existing dishes: ${otherNames.join(', ') || '(none)'}.`
     const allergyBlock = `### ALLERGY CONSTRAINTS (HARD RULE)\n${allergyLines || '(none)'}`
     const excludedBlock = `### EXCLUDED DISHES (do NOT repeat)\n${
       dislikedNames.length ? dislikedNames.map((n) => `- ${n}`).join('\n') : '(none)'
