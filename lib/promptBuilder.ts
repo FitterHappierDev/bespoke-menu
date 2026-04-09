@@ -56,10 +56,10 @@ const OUTPUT_SCHEMA = `
 Return ONLY a JSON object with this exact shape (no prose, no markdown fences):
 {
   "protein_dishes": [
-    { "name": "...", "emoji": "...", "recipe_url": "https://...", "tags": ["Low Sodium","Low Carb"], "ingredients": ["..."], "description": "...", "is_new": false }
+    { "name": "...", "emoji": "...", "recipe_url": "https://...", "tags": ["Low Sodium","Low Carb"], "ingredients": ["..."], "description": "1-2 short sentences, max ~25 words", "is_new": false }
   ],
   "veg_dishes": [
-    { "name": "...", "emoji": "...", "recipe_url": "https://...", "tags": ["..."], "ingredients": ["..."], "description": "...", "is_new": false }
+    { "name": "...", "emoji": "...", "recipe_url": "https://...", "tags": ["..."], "ingredients": ["..."], "description": "1-2 short sentences, max ~25 words", "is_new": false }
   ]
 }
 Exactly 5 protein_dishes and exactly 5 veg_dishes.

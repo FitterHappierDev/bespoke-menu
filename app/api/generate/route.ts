@@ -6,13 +6,13 @@ import { parseMenuResponse } from '@/lib/menuParser'
 import { validateUrls } from '@/lib/urlValidator'
 import type { GeneratedDish } from '@/types'
 
-const MODEL = 'claude-sonnet-4-5'
+const MODEL = 'claude-sonnet-4-6'
 
 async function callModel(prompt: string): Promise<string> {
   const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! })
   const res = await client.messages.create({
     model: MODEL,
-    max_tokens: 4096,
+    max_tokens: 8192,
     messages: [{ role: 'user', content: prompt }],
   })
   const block = res.content.find((b) => b.type === 'text') as any
