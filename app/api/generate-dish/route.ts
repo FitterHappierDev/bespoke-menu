@@ -12,7 +12,7 @@ const SYSTEM_ROLE =
 
 const SINGLE_DISH_SCHEMA = `### OUTPUT FORMAT (REQUIRED)
 Return ONLY a JSON object (no prose, no markdown fences) shaped:
-{ "dish": { "name": "...", "emoji": "...", "recipe_url": "https://...", "tags": ["..."], "ingredients": ["..."], "description": "...", "is_new": false } }`
+{ "dish": { "name": "...", "emoji": "...", "recipe_url": "https://...", "tags": ["..."], "ingredients": ["..."], "description": "1-2 short sentences, max ~25 words", "is_new": false } }`
 
 export async function POST(request: NextRequest) {
   try {
