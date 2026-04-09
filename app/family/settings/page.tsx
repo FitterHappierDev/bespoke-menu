@@ -43,7 +43,7 @@ export default function SettingsPage() {
 
   useEffect(() => {
     ;(async () => {
-      const res = await fetch('/api/config')
+      const res = await fetch('/api/config', { cache: 'no-store' })
       const json = await res.json()
       const c = json.config as Config | null
       if (c) {
