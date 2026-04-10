@@ -8,7 +8,7 @@ import { validateUrl } from '@/lib/urlValidator'
 const MODEL = 'claude-sonnet-4-6'
 
 const SYSTEM_ROLE =
-  "You are a culinary AI assistant generating a single replacement dish. Follow the user's custom instructions precisely while respecting allergy constraints and avoiding previously disliked dishes. Return only the requested JSON."
+  "You are a culinary AI assistant revising a dish. You are given the current dish details and custom instructions. If the instructions ask for a tweak (e.g. 'less spicy', 'swap the protein'), keep the dish's identity and adjust accordingly. If the instructions ask for something entirely different, generate a new dish. Always respect allergy constraints and avoid disliked dishes. Return only the requested JSON."
 
 const SINGLE_DISH_SCHEMA = `### OUTPUT FORMAT (REQUIRED)
 Return ONLY a JSON object (no prose, no markdown fences) shaped:
@@ -24,7 +24,12 @@ export async function POST(request: NextRequest) {
     const { data: menu } = await sb.from('weekly_menus').select('*').eq('id', menu_id).single()
     if (!menu || menu.status !== 'draft') return NextResponse.json({ error: 'Menu is locked' }, { status: 409 })
 
-    const { data: items } = await sb.from('menu_items').select('*, dish:dishes(name)').eq('menu_id', menu_id)
+    const { data: items } = await sb
+      .from('menu_items')
+      .select('*, dish:dishes(name, description, ingredients)')
+      .eq('menu_id', menu_id)
+    const currentItem = (items ?? []).find((i: any) => i.type === type && i.position === position)
+    const currentDish = currentItem?.dish as { name: string; description: string; ingredients: string[] } | undefined
     const otherNames = (items ?? [])
       .filter((i: any) => !(i.type === type && i.position === position))
       .map((i: any) => i.dish?.name)
@@ -39,6 +44,9 @@ export async function POST(request: NextRequest) {
       .map((line) => `- NEVER include ${line.replace(/^no\s+/i, '')}`)
       .join('\n')
 
+    const currentDishBlock = currentDish
+      ? `### CURRENT DISH (use as starting point)\nName: ${currentDish.name}\nDescription: ${currentDish.description || '(none)'}\nIngredients: ${(currentDish.ingredients ?? []).join(', ') || '(none)'}`
+      : `### CURRENT DISH\nName: ${dish_name}`
     const customBlock = `### CUSTOM INSTRUCTIONS (PRIMARY — follow these first)\n${
       custom_prompt?.trim() || '(none provided)'
     }`
@@ -46,13 +54,13 @@ export async function POST(request: NextRequest) {
       type === 'protein'
         ? 'protein-based main dish (the primary protein is the centerpiece — e.g. fish, poultry, meat, tofu, legumes)'
         : 'vegetable side dish (vegetables are the centerpiece; no meat, poultry, or fish as the main component)'
-    const taskBlock = `### REPLACEMENT TASK\nReplace "${dish_name}". Generate exactly 1 replacement ${dishKind}.\nIt must be different from these existing dishes: ${otherNames.join(', ') || '(none)'}.`
+    const taskBlock = `### REPLACEMENT TASK\nGenerate a revised version of the current dish as a ${dishKind}. Use the custom instructions to guide how much to change — they may ask for a small tweak or a completely different dish.\nIt must be different from these existing dishes: ${otherNames.join(', ') || '(none)'}.`
     const allergyBlock = `### ALLERGY CONSTRAINTS (HARD RULE)\n${allergyLines || '(none)'}`
     const excludedBlock = `### EXCLUDED DISHES (do NOT repeat)\n${
       dislikedNames.length ? dislikedNames.map((n) => `- ${n}`).join('\n') : '(none)'
     }`
 
-    const prompt = [customBlock, taskBlock, allergyBlock, excludedBlock, SINGLE_DISH_SCHEMA].join('\n\n')
+    const prompt = [currentDishBlock, customBlock, taskBlock, allergyBlock, excludedBlock, SINGLE_DISH_SCHEMA].join('\n\n')
 
     const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! })
     let dish
