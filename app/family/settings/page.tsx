@@ -157,6 +157,7 @@ export default function SettingsPage() {
         <p className="text-xs text-muted-foreground mb-3">One per line. The AI will be told to never include these.</p>
         <Textarea
           rows={4}
+          className="font-mono text-xs"
           placeholder={'No shellfish\nNo tree nuts'}
           value={cfg.allergy_constraints}
           onChange={(e) => update('allergy_constraints', e.target.value)}
