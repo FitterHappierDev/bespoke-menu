@@ -12,6 +12,7 @@ import { ChefProposalCard } from '@/components/ChefProposalCard'
 import { AiRegenerateDialog } from '@/components/AiRegenerateDialog'
 import { DishAiRegenerateDialog } from '@/components/DishAiRegenerateDialog'
 import { PublishDialog } from '@/components/PublishDialog'
+import { EmailPreviewDialog } from '@/components/EmailPreviewDialog'
 import { EditDishDialog } from '@/components/EditDishDialog'
 import { offsetWeek } from '@/lib/weekUtils'
 import { getUIState } from '@/lib/statusMachine'
@@ -42,6 +43,8 @@ export default function FamilyMenuPage() {
 
   const [publishDialogOpen, setPublishDialogOpen] = useState(false)
   const [isPublishing, setIsPublishing] = useState(false)
+  const [emailHtml, setEmailHtml] = useState('')
+  const [emailPreviewOpen, setEmailPreviewOpen] = useState(false)
 
   const [editDish, setEditDish] = useState<Dish | null>(null)
   const [editOpen, setEditOpen] = useState(false)
@@ -166,8 +169,13 @@ export default function FamilyMenuPage() {
         toast.error('Publish failed')
         return
       }
+      const data = await res.json()
       toast.success('Menu published to chef ✓')
       setPublishDialogOpen(false)
+      if (data.emailHtml) {
+        setEmailHtml(data.emailHtml)
+        setEmailPreviewOpen(true)
+      }
       await fetchMenu()
     } finally {
       setIsPublishing(false)
@@ -423,6 +431,7 @@ export default function FamilyMenuPage() {
         isPublishing={isPublishing}
       />
       <EditDishDialog open={editOpen} onOpenChange={setEditOpen} dish={editDish} onSave={saveDishEdit} />
+      <EmailPreviewDialog open={emailPreviewOpen} onOpenChange={setEmailPreviewOpen} emailHtml={emailHtml} />
     </div>
   )
 }
