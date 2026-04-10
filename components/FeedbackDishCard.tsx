@@ -49,7 +49,7 @@ export function FeedbackDishCard({ dish, rating, note, ratedAt, disabled, onRati
                   disabled={disabled}
                   onClick={() => onRating(selected ? null : o.key)}
                   className={cn(
-                    'min-h-[36px] rounded-lg border-2 flex flex-col items-center justify-center transition disabled:opacity-50',
+                    'min-h-[36px] px-2 py-1.5 rounded-lg border-2 flex flex-col items-center justify-center transition disabled:opacity-50',
                     selected ? o.selected : 'border-muted-foreground/30 hover:border-muted-foreground/50'
                   )}
                   aria-pressed={selected}
