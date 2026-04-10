@@ -1,7 +1,7 @@
 'use client'
 
 import { Fragment, useEffect, useState, useCallback } from 'react'
-import { Sparkles } from 'lucide-react'
+import { Sparkles, Mail } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -156,6 +156,18 @@ export default function FamilyMenuPage() {
     }
   }
 
+  async function viewChefEmail() {
+    if (!menuData?.menu) return
+    const res = await fetch(`/api/publish/email?menu_id=${menuData.menu.id}`)
+    if (!res.ok) {
+      toast.error('Failed to load email')
+      return
+    }
+    const data = await res.json()
+    setEmailHtml(data.emailHtml)
+    setEmailPreviewOpen(true)
+  }
+
   async function handlePublish() {
     if (!menuData?.menu) return
     setIsPublishing(true)
@@ -273,6 +285,11 @@ export default function FamilyMenuPage() {
           <Button variant="outline" onClick={openAiDialog} disabled={!canEdit}>
             <Sparkles className="w-4 h-4" /> Regenerate with AI
           </Button>
+          {isPublished && (
+            <Button variant="outline" onClick={viewChefEmail}>
+              <Mail className="w-4 h-4" /> View Chef Email
+            </Button>
+          )}
           <Button onClick={() => setPublishDialogOpen(true)} disabled={!ui.canPublish || !isCurrentOrFuture}>
             {isPublished ? 'Published' : 'Publish to Chef'}
           </Button>
