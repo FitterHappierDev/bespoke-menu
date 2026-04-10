@@ -4,7 +4,12 @@ import { Toaster } from 'sonner'
 
 export const metadata: Metadata = {
   title: 'Bespoke Menu Planner',
-  description: 'Private weekly meal planner',
+  description: 'Private weekly meal planning for your family',
+  openGraph: {
+    title: 'Bespoke Menu Planner',
+    description: 'Private weekly meal planning for your family',
+    type: 'website',
+  },
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
