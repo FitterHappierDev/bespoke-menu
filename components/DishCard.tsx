@@ -22,7 +22,7 @@ export function DishCard({ dish, note, isPublished, onNoteChange, onRegenerate, 
   const [draftNote, setDraftNote] = useState(note)
 
   return (
-    <Card className="p-3 hover:shadow-md transition-all duration-200">
+    <Card className="p-3 h-full hover:shadow-md transition-all duration-200">
       <div className="flex gap-3">
         <div className="text-3xl leading-none pt-0.5">{dish.emoji || '🍽️'}</div>
         <div className="flex-1 min-w-0">
