@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
     if (!week_start) return NextResponse.json({ error: 'week_start required' }, { status: 400 })
 
     const sb = createServerClient()
-    const ctx = await buildPromptContext()
+    const ctx = await buildPromptContext(week_start)
     const prompt = assemblePrompt(ctx, custom_prompt)
 
     let parsed

@@ -7,12 +7,40 @@ export interface PromptContext {
   topLoved: { dish_name: string; note: string }[]
   disliked: { dish_name: string; note: string }[]
   legacyRatings: { dish_name: string; rating: string; note: string }[]
+  recentlyServed: string[]
 }
 
-export async function buildPromptContext(): Promise<PromptContext> {
+const RECENTLY_SERVED_WEEKS = 3
+
+export async function buildPromptContext(weekStart?: string): Promise<PromptContext> {
   const sb = createServerClient()
   const { data: configRows } = await sb.from('config').select('*').limit(1)
   const config = configRows?.[0] as Config
+
+  // Fetch dishes served in the last N weeks (excluding the week we're generating for)
+  let recentMenuQuery = sb
+    .from('weekly_menus')
+    .select('id, week_start')
+    .order('week_start', { ascending: false })
+    .limit(RECENTLY_SERVED_WEEKS)
+  if (weekStart) recentMenuQuery = recentMenuQuery.lt('week_start', weekStart)
+  const { data: recentMenus } = await recentMenuQuery
+  const recentMenuIds = (recentMenus ?? []).map((m: any) => m.id)
+  let recentlyServed: string[] = []
+  if (recentMenuIds.length) {
+    const { data: recentItems } = await sb
+      .from('menu_items')
+      .select('dish:dishes(name)')
+      .in('menu_id', recentMenuIds)
+    const seen = new Set<string>()
+    for (const row of recentItems ?? []) {
+      const name = (row as any).dish?.name
+      if (name && !seen.has(name)) {
+        seen.add(name)
+        recentlyServed.push(name)
+      }
+    }
+  }
 
   const { data: lovedRows } = await sb
     .from('daily_feedback')
@@ -48,6 +76,7 @@ export async function buildPromptContext(): Promise<PromptContext> {
     topLoved: (lovedRows ?? []).map((r: any) => ({ dish_name: r.dish?.name ?? 'Unknown', note: r.note ?? '' })),
     disliked: (dislikedRows ?? []).map((r: any) => ({ dish_name: r.dish?.name ?? 'Unknown', note: r.note ?? '' })),
     legacyRatings: mapName(legacyRows),
+    recentlyServed,
   }
 }
 
@@ -92,13 +121,18 @@ export function assemblePrompt(ctx: PromptContext, customInstructions?: string):
     : ''
 
   const lovedBlock = ctx.topLoved.length
-    ? `### TOP-RATED DISHES (loved)\n` +
+    ? `### FLAVOR INSPIRATION (loved dishes — use as a guide for style/cuisine, but do NOT repeat the exact dishes)\n` +
       ctx.topLoved.map((r) => `- ${r.dish_name}${r.note ? ` — "${r.note}"` : ''}`).join('\n')
     : ''
 
   const dislikedBlock = ctx.disliked.length
     ? `### EXCLUDED DISHES (disliked, do NOT repeat)\n` +
       ctx.disliked.map((r) => `- ${r.dish_name}${r.note ? ` — "${r.note}"` : ''}`).join('\n')
+    : ''
+
+  const recentlyServedBlock = ctx.recentlyServed.length
+    ? `### RECENTLY SERVED (do NOT repeat — served in the last ${RECENTLY_SERVED_WEEKS} weeks)\n` +
+      ctx.recentlyServed.map((n) => `- ${n}`).join('\n')
     : ''
 
   const legacyBlock = ctx.legacyRatings.length
@@ -118,6 +152,7 @@ export function assemblePrompt(ctx: PromptContext, customInstructions?: string):
     recentBatchBlock,
     lovedBlock,
     dislikedBlock,
+    recentlyServedBlock,
     legacyBlock,
     customBlock,
     OUTPUT_SCHEMA,
