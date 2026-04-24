@@ -1,13 +1,14 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { toast } from 'sonner'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
 import { Dialog, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
 import { FeedbackDishCard } from '@/components/FeedbackDishCard'
-import { formatWeekLabel } from '@/lib/weekUtils'
+import { formatWeekLabel, offsetWeek } from '@/lib/weekUtils'
 import type { Dish, MenuItem, WeeklyMenu, DailyFeedback, FeedbackRating } from '@/types'
 
 interface FeedbackData {
@@ -17,6 +18,8 @@ interface FeedbackData {
 }
 
 export default function FeedbackPage() {
+  const [anchor, setAnchor] = useState<string | null>(null)
+  const [weekOffset, setWeekOffset] = useState(0)
   const [weekStart, setWeekStart] = useState<string | null>(null)
   const [data, setData] = useState<FeedbackData | null>(null)
   const [loading, setLoading] = useState(true)
@@ -25,11 +28,16 @@ export default function FeedbackPage() {
 
   useEffect(() => {
     ;(async () => {
-      const res = await fetch('/api/week')
+      const res = await fetch('/api/week?current=true')
       const { week_start } = await res.json()
+      setAnchor(week_start)
       setWeekStart(week_start)
     })()
   }, [])
+
+  useEffect(() => {
+    if (anchor) setWeekStart(offsetWeek(anchor, weekOffset))
+  }, [anchor, weekOffset])
 
   const fetchData = useCallback(async () => {
     if (!weekStart) return
@@ -124,6 +132,21 @@ export default function FeedbackPage() {
     return (
       <div className="max-w-2xl mx-auto px-4 py-6">
         <h1 className="font-serif text-3xl md:text-4xl mb-1">Rate This Week</h1>
+        <div className="flex items-center gap-2 mb-4">
+          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setWeekOffset((o) => o - 1)}>
+            <ChevronLeft className="w-4 h-4" />
+          </Button>
+          <span className="text-sm text-muted-foreground">{formatWeekLabel(weekStart)}</span>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7"
+            disabled={weekOffset >= 0}
+            onClick={() => setWeekOffset((o) => o + 1)}
+          >
+            <ChevronRight className="w-4 h-4" />
+          </Button>
+        </div>
         <p className="text-sm text-muted-foreground">No menu published yet for this week.</p>
       </div>
     )
@@ -132,7 +155,21 @@ export default function FeedbackPage() {
   return (
     <div className="max-w-2xl mx-auto px-4 py-6 pb-24 md:pb-8">
       <h1 className="font-serif text-3xl md:text-4xl mb-1">Rate This Week</h1>
-      <p className="text-sm text-muted-foreground mb-6">{formatWeekLabel(weekStart)}</p>
+      <div className="flex items-center gap-2 mb-6">
+        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setWeekOffset((o) => o - 1)}>
+          <ChevronLeft className="w-4 h-4" />
+        </Button>
+        <span className="text-sm text-muted-foreground">{formatWeekLabel(weekStart)}</span>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-7 w-7"
+          disabled={weekOffset >= 0}
+          onClick={() => setWeekOffset((o) => o + 1)}
+        >
+          <ChevronRight className="w-4 h-4" />
+        </Button>
+      </div>
 
       <Card className="p-6 mb-6">
         <div className="flex items-center justify-between mb-2">

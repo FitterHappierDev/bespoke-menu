@@ -4,7 +4,8 @@ export const dynamic = 'force-dynamic'
 
 const TZ = 'America/Los_Angeles'
 
-export function GET() {
+export function GET(request: Request) {
+  const current = new URL(request.url).searchParams.get('current') === 'true'
   // Get current date parts in Pacific time
   const parts = new Intl.DateTimeFormat('en-US', {
     timeZone: TZ,
@@ -25,8 +26,8 @@ export function GET() {
   const d = new Date(Date.UTC(year, month - 1, dayNum))
   d.setUTCDate(d.getUTCDate() - dayIndex)
 
-  // After Sunday (Mon–Sat), default to next week
-  if (dayIndex >= 1) {
+  // After Sunday (Mon–Sat), default to next week unless ?current=true
+  if (dayIndex >= 1 && !current) {
     d.setUTCDate(d.getUTCDate() + 7)
   }
 
